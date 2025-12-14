@@ -1,0 +1,12 @@
+:root{
+  --bg: #f6f8f4;
+  --panel: #dfe8d8;
+  --panel2: #eef3ea;
+  --text: #1f2a1f;
+  --muted: #5c6b5c;
+  --border: #cfd8c8;
+  --card: #ffffff;
+  --accent: #5d8a5d;
+  --accent2: #88b488;
+}
+body{ background: var(--bg); color: var(--text); }
