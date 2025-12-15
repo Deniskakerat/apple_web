@@ -1,12 +1,82 @@
 :root{
-  --bg: #f6f8f4;
-  --panel: #dfe8d8;
-  --panel2: #eef3ea;
-  --text: #1f2a1f;
-  --muted: #5c6b5c;
-  --border: #cfd8c8;
-  --card: #ffffff;
-  --accent: #5d8a5d;
-  --accent2: #88b488;
+  --bg: #f5f1e7;        /* беж */
+  --panel: #f4f1ea;     /* світла панель */
+  --panel2: #dfead7;    /* світло-зелений блок */
+  --border: #cfcfc7;
+ --text: #1f2a1f;
+  --dark: #0f3b21;      /* темно-зелений бар */
+
+  --muted: #6b6b6b;
 }
-body{ background: var(--bg); color: var(--text); }
+
+body{
+  background: var(--bg);
+  color: var(--text);
+}
+
+.shell{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.topBar{
+  height: 56px;
+  background: var(--dark);
+}
+
+.navWrap{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  padding: 18px 20px;
+}
+
+.navRow{
+  display: grid;
+  grid-template-columns: 60px 1fr 80px;
+  align-items: center;
+}
+
+.logoBox{
+  width: 34px;
+  height: 34px;
+  background: var(--panel2);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+.navTitle{
+  text-align: center;
+  font-size: 36px;
+  font-weight: 500;
+}
+
+.navLink{
+  text-align: right;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.footer{
+  margin-top: 40px;
+  background: var(--panel2);
+  border-top: 1px solid var(--border);
+  padding: 26px 0;
+}
+
+.footerGrid{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  text-align: center;
+  font-size: 18px;
+}
+
+.card{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}

@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  phone        String?
+  role         Role     @default(USER)
+  isBlocked    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+}
+
+model Category {
+  id    String    @id @default(cuid())
+  name  String
+  slug  String    @unique
+  items Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  price       Int
+  description String?
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  imagePath   String?
+  type        String?  // apple | pear | plum | peach
+
+
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+}
