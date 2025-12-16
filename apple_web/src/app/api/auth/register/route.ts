@@ -1,43 +1,50 @@
 import { prisma } from "@/lib/prisma";
-import { hashPassword, signToken } from "@/lib/auth";
+import { verifyPassword, signToken, hashPassword } from "@/lib/auth";
 import { cookies } from "next/headers";
 import type { NextRequest } from "next/server";
 
 export async function POST(req: NextRequest) {
-  const { email, password, name } = await req.json();
+  const { email, password } = await req.json();
 
-  const normEmail = String(email ?? "").trim().toLowerCase();
+  const rawEmail = String(email ?? "").trim().toLowerCase();
   const pass = String(password ?? "");
 
-  if (!normEmail || !pass) {
+  if (!rawEmail || !pass) {
     return Response.json({ error: "Вкажіть email і пароль." }, { status: 400 });
   }
 
-  if (pass.length < 8) {
-    return Response.json({ error: "Пароль має бути мінімум 8 символів." }, { status: 400 });
+  // ✅ Admin shortcut: email = "admin", password = "12345123"
+  if (rawEmail === "admin" && pass === "12345123") {
+    // створимо (або оновимо) адміна в БД, щоб все було офіційно
+    const adminEmail = "admin@local";
+    const admin = await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { role: "ADMIN" },
+      create: {
+        email: adminEmail,
+        name: "Admin",
+        passwordHash: await hashPassword(pass),
+        role: "ADMIN",
+      },
+    });
+
+    const token = signToken(admin.id);
+    (await cookies()).set("token", token, { httpOnly: true, sameSite: "lax", path: "/" });
+    return Response.json({ ok: true, role: "ADMIN" });
   }
 
-  const exists = await prisma.user.findUnique({ where: { email: normEmail } });
-  if (exists) {
-    return Response.json({ error: "Цей email вже зареєстрований." }, { status: 409 });
+  const user = await prisma.user.findUnique({ where: { email: rawEmail } });
+  if (!user) {
+    return Response.json({ error: "Невірний email або пароль." }, { status: 401 });
   }
 
-  const user = await prisma.user.create({
-    data: {
-      email: normEmail,
-      name: name ? String(name) : null,
-      passwordHash: await hashPassword(pass),
-      role: "USER",
-    },
-  });
+  const ok = await verifyPassword(pass, user.passwordHash);
+  if (!ok) {
+    return Response.json({ error: "Невірний email або пароль." }, { status: 401 });
+  }
 
   const token = signToken(user.id);
+  (await cookies()).set("token", token, { httpOnly: true, sameSite: "lax", path: "/" });
 
-  (await cookies()).set("token", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-  });
-
-  return Response.json({ ok: true });
+  return Response.json({ ok: true, role: user.role });
 }

@@ -1,10 +1,13 @@
+// src/app/product/[slug]/page.tsx
 import { prisma } from "@/lib/prisma";
-import ProductClient from "./product-client";
+import { notFound } from "next/navigation";
 
-export default async function ProductPage(
-  { params }: { params: Promise<{ slug: string }> }
-) {
-  const { slug } = await params;
+type PageProps = {
+  params: Promise<{ slug: string }>;
+};
+
+export default async function ProductPage({ params }: PageProps) {
+  const { slug } = await params; // ✅ важливо!
 
   const product = await prisma.product.findUnique({
     where: { slug },
@@ -14,14 +17,24 @@ export default async function ProductPage(
       slug: true,
       price: true,
       stock: true,
-      imagePath: true,      
+      imagePath: true,
       description: true,
     },
   });
 
-  if (!product) {
-    return <div style={{ padding: 20 }}>Товар не знайдено</div>;
-  }
+  if (!product) return notFound();
 
-  return <ProductClient product={product} />;
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>{product.title}</h1>
+      <p>{product.description}</p>
+      <p>Ціна: {product.price} грн</p>
+      <p>В наявності: {product.stock}</p>
+
+      {product.imagePath && (
+        // якщо ти використовуєш next/image — можна замінити на <Image />
+        <img src={product.imagePath} alt={product.title} style={{ maxWidth: 400 }} />
+      )}
+    </main>
+  );
 }

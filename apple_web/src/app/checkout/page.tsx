@@ -3,20 +3,18 @@ import { redirect } from "next/navigation";
 import { verifyToken } from "@/lib/auth";
 
 export default async function CheckoutPage() {
-  const token = (await cookies()).get("token")?.value;
+  const jar = await cookies();
+  const token = jar.get("token")?.value;
 
-  if (!token) redirect("/login");
+  if (!token) redirect("/login?next=/checkout");
 
-  try {
-    verifyToken(token);
-  } catch {
-    redirect("/login");
-  }
+  try { verifyToken(token); }
+  catch { redirect("/login?next=/checkout"); }
 
   return (
-    <div style={{ maxWidth: 900, margin: "40px auto", padding: 16 }}>
-      <h1>Checkout</h1>
-      <p>Тут буде оформлення замовлення ✅</p>
+    <div style={{ maxWidth: 600, margin: "0 auto" }}>
+      <h1>Оформлення замовлення</h1>
+      <p>Тут зробимо форму і створення ордеру.</p>
     </div>
   );
 }
