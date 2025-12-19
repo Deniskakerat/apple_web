@@ -6,6 +6,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum OrderStatus {
+  NEW
+  CONFIRMED
+  DECLINED
+}
+
 enum Role {
   USER
   ADMIN
@@ -20,6 +26,8 @@ model User {
   role         Role     @default(USER)
   isBlocked    Boolean  @default(false)
   createdAt    DateTime @default(now())
+
+  orders Order[]
 }
 
 model Category {
@@ -39,9 +47,40 @@ model Product {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   imagePath   String?
-  type        String?  // apple | pear | plum | peach
+  type        String? // apple | pear | plum | peach
 
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+}
 
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique @default(cuid()) // simple unique номер замовлення
+  status      OrderStatus @default(NEW)
+
+  customerName String
+  phone        String
+  city         String
+  address      String
+  comment      String?
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  items     OrderItem[]
+  total     Int         @default(0)
+  createdAt DateTime    @default(now())
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  slug      String
+  title     String
+  price     Int
+  qty       Int
 }

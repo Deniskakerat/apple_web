@@ -1,8 +1,6 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
-import SiteFrame from "../../../components/SiteFrame";
+import { useMemo, useState } from "react";
 
 type Product = {
   id: string;
@@ -12,6 +10,7 @@ type Product = {
   stock: number;
   imagePath: string | null;
   description: string | null;
+  type: string | null;
 };
 
 function readCart(): Record<string, number> {
@@ -24,89 +23,144 @@ function writeCart(cart: Record<string, number>) {
 export default function ProductClient({ product }: { product: Product }) {
   const [qty, setQty] = useState(1);
 
-  const buy = () => {
-    const q = Math.max(1, Math.min(999, qty));
+  const canBuy = product.stock > 0;
+
+  const inCart = useMemo(() => {
     const cart = readCart();
-    cart[product.slug] = (cart[product.slug] ?? 0) + q;
+    return cart[product.slug] ?? 0;
+  }, [product.slug]);
+
+  const addToCart = () => {
+    const cart = readCart();
+    const nextQty = Math.min((cart[product.slug] ?? 0) + qty, product.stock);
+    cart[product.slug] = nextQty;
     writeCart(cart);
-    alert(`Додано: ${q} шт ✅`);
+    // легке підтвердження без UI бібліотек
+    alert(`Додано в кошик: ${product.title} × ${qty}`);
   };
 
   return (
-    <SiteFrame title="Навігація">
-      <div style={{ display: "grid", gridTemplateColumns: "430px 1fr", gap: 28, alignItems: "start" }}>
-        {/* left image card */}
-        <div style={{ background: "var(--panel2)", padding: 20, borderRadius: 2, width: "fit-content" }}>
-          <div style={{ position: "relative", width: 280, height: 330, background: "#fff", border: "1px solid var(--border)" }}>
-            {product.imagePath ? (
-              <Image src={product.imagePath} alt={product.title} fill style={{ objectFit: "cover" }} />
-            ) : null}
-          </div>
+    <div style={{ maxWidth: 980, margin: "0 auto", padding: 16 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "420px 1fr",
+          gap: 22,
+          alignItems: "start",
+        }}
+      >
+        {/* LEFT: image card */}
+        <div
+          style={{
+            background: "rgba(120, 160, 120, 0.18)",
+            borderRadius: 14,
+            padding: 18,
+            border: "1px solid var(--border)",
+          }}
+        >
+          {product.imagePath ? (
+            <img
+              src={product.imagePath}
+              alt={product.title}
+              style={{
+                width: "100%",
+                height: 360,
+                objectFit: "cover",
+                borderRadius: 12,
+                background: "white",
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                height: 360,
+                borderRadius: 12,
+                border: "1px dashed var(--border)",
+                display: "grid",
+                placeItems: "center",
+                color: "var(--muted)",
+              }}
+            >
+              Немає фото
+            </div>
+          )}
         </div>
 
-        {/* right info */}
+        {/* RIGHT: info */}
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700 }}>{product.title}</div>
+          <div style={{ fontWeight: 700, fontSize: 18, marginBottom: 8 }}>
+            {product.title}
+          </div>
 
-          <div style={{ marginTop: 6, fontSize: 34, fontWeight: 800 }}>
+          <div style={{ fontSize: 34, fontWeight: 800, marginBottom: 6 }}>
             {product.price} UAH
           </div>
 
-          <div style={{ marginTop: 6, color: "var(--muted)", fontSize: 12 }}>
-            Ціна за штуку саджанця
+          <div style={{ color: "var(--muted)", fontSize: 12, marginBottom: 14 }}>
+            Ціна за штуку саджанця · В наявності: <b>{product.stock}</b> · В кошику: <b>{inCart}</b>
           </div>
 
-          {/* quantity + buy */}
-          <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Кількість</div>
-              <input
-                type="number"
-                min={1}
-                value={qty}
-                onChange={(e) => setQty(Number(e.target.value))}
-                style={{
-                  width: "100%",
-                  padding: "10px 12px",
-                  borderRadius: 6,
-                  border: "1px solid var(--border)",
-                  background: "white",
-                }}
-              />
-            </div>
-            <div>
-              <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>Наявність</div>
-              <div className="card" style={{ padding: "10px 12px" }}>
-                {product.stock} шт
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={buy}
+          {/* qty + buy */}
+          <div
             style={{
-              marginTop: 14,
-              width: "100%",
-              padding: "12px 14px",
-              borderRadius: 6,
-              border: "1px solid #2a2a2a",
-              background: "#2a2a2a",
-              color: "white",
-              cursor: "pointer",
+              display: "grid",
+              gridTemplateColumns: "120px 1fr",
+              gap: 10,
+              alignItems: "center",
+              marginBottom: 10,
             }}
           >
-            Купити
-          </button>
+            <select
+              value={qty}
+              onChange={(e) => setQty(Number(e.target.value))}
+              style={{
+                padding: "10px 12px",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                background: "white",
+              }}
+              disabled={!canBuy}
+            >
+              {Array.from({ length: Math.max(1, Math.min(10, product.stock)) }, (_, i) => i + 1).map((n) => (
+                <option key={n} value={n}>{n} шт</option>
+              ))}
+            </select>
 
-          {/* description block */}
-          <div className="card" style={{ marginTop: 14, padding: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Опис</div>
-            <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>
-              {product.description ?? "Опис відсутній."}
+            <button
+              onClick={addToCart}
+              disabled={!canBuy}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                borderRadius: 8,
+                border: "1px solid #2a2a2a",
+                background: "#2a2a2a",
+                color: "white",
+                cursor: canBuy ? "pointer" : "not-allowed",
+                opacity: canBuy ? 1 : 0.6,
+              }}
+            >
+              Купити
+            </button>
+          </div>
+
+          {/* description card */}
+          <div
+            style={{
+              marginTop: 12,
+              background: "white",
+              border: "1px solid var(--border)",
+              borderRadius: 12,
+              padding: 12,
+            }}
+          >
+            <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>Опис</div>
+            <div style={{ color: "var(--muted)", fontSize: 13, lineHeight: 1.5 }}>
+              {product.description || "Опис буде додано пізніше."}
             </div>
           </div>
         </div>
       </div>
-    </SiteFrame>
+    </div>
   );
 }

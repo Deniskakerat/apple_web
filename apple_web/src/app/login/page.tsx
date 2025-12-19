@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import SiteFrame from "@/components/SiteFrame";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -11,70 +12,60 @@ export default function LoginPage() {
 
   const router = useRouter();
   const sp = useSearchParams();
-  const nextUrl = sp.get("next") || "/";
 
-async function submit() {
-  const res = await fetch(`/api/auth/${mode}`, {
-    method: "POST",
-    body: JSON.stringify({ email, password, name }),
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-  });
+  async function submit() {
+    const res = await fetch(`/api/auth/${mode}`, {
+      method: "POST",
+      body: JSON.stringify({ email, password, name }),
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    });
 
-  const data = await res.json().catch(() => ({}));
+    const data = await res.json().catch(() => ({}));
 
-  if (!res.ok) {
-    alert(data?.error ?? `Помилка: ${res.status}`);
-    return;
+    if (!res.ok) {
+      alert(data?.error ?? `Помилка: ${res.status}`);
+      return;
+    }
+
+    const nextUrl = sp.get("next") || "/";
+    const safeNext =
+      nextUrl.startsWith("/login") || nextUrl.startsWith("/api")
+        ? "/"
+        : nextUrl;
+
+    // якщо адмін — кидаємо в адмінку (або в next якщо він вже /admin)
+    const target =
+      data?.role === "ADMIN" ? (safeNext.startsWith("/admin") ? safeNext : "/admin") : safeNext;
+
+    router.replace(target);
+    router.refresh();
   }
 
-const nextUrl = sp.get("next") || "/";
-
-// не дозволяємо редірект у /login або /api
-const safeNext =
-  nextUrl.startsWith("/login") || nextUrl.startsWith("/api")
-    ? "/"
-    : nextUrl;
-
-router.replace(safeNext);
-router.refresh();
-
-}
-
   return (
-    <div style={{ maxWidth: 360, margin: "80px auto" }}>
-      <h1>{mode === "login" ? "Вхід" : "Реєстрація"}</h1>
+    <SiteFrame title="Вхід">
+      <div style={{ maxWidth: 360, margin: "40px auto" }}>
+        <h1>{mode === "login" ? "Вхід" : "Реєстрація"}</h1>
 
-      {mode === "register" && (
-        <input
-          placeholder="Імʼя"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-      )}
+        {mode === "register" && (
+          <input placeholder="Імʼя" value={name} onChange={(e) => setName(e.target.value)} />
+        )}
 
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Пароль"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input type="password" placeholder="Пароль" value={password} onChange={(e) => setPassword(e.target.value)} />
 
-      <button onClick={submit} style={{ width: "100%", marginTop: 10 }}>
-        {mode === "login" ? "Увійти" : "Зареєструватись"}
-      </button>
+        <button onClick={submit} style={{ width: "100%", marginTop: 10 }}>
+          {mode === "login" ? "Увійти" : "Зареєструватись"}
+        </button>
 
-      <button
-        onClick={() => setMode(mode === "login" ? "register" : "login")}
-        style={{ marginTop: 10 }}
-      >
-        {mode === "login" ? "Створити акаунт" : "Вже є акаунт"}
-      </button>
-    </div>
+        <button onClick={() => setMode(mode === "login" ? "register" : "login")} style={{ marginTop: 10 }}>
+          {mode === "login" ? "Створити акаунт" : "Вже є акаунт"}
+        </button>
+
+        <div style={{ marginTop: 10, color: "var(--muted)", fontSize: 12 }}>
+          Admin: <b>admin</b> / <b>12345123</b>
+        </div>
+      </div>
+    </SiteFrame>
   );
 }

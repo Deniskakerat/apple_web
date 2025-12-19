@@ -1,134 +1,234 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import SiteFrame from "@/components/SiteFrame";
 
-export default function LoginPage() {
-  const router = useRouter();
+type Product = {
+  id: string;
+  title: string;
+  slug: string;
+  price: number;
+  stock: number;
+  imagePath: string | null;
+  type: string | null;        // apple/pear/plum/peach...
+  categoryId?: string | null; // якщо є
+  category?: { name: string } | null; // якщо підтягуєш
+};
 
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function HomePage() {
+  const [q, setQ] = useState("");
+  const [type, setType] = useState<string>("all");
+  const [minPrice, setMinPrice] = useState<number | "">("");
+  const [maxPrice, setMaxPrice] = useState<number | "">("");
 
-  const [msg, setMsg] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
- async function submit() {
-  setMsg(null);
+  // 1) грузимо товари з API (зроби /api/products або використай свій)
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/products", { cache: "no-store" });
+        const data = await res.json().catch(() => ({}));
+        setProducts(Array.isArray(data?.products) ? data.products : (Array.isArray(data) ? data : []));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const e = email.trim().toLowerCase();
-  const p = password;
+  // 2) список категорій по type
+  const typeOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of products) if (p.type) set.add(p.type);
+    return ["all", ...Array.from(set)];
+  }, [products]);
 
-  if (!e || !p) {
-    setMsg("Вкажіть email і пароль.");
-    return;
-  }
-  if (mode === "register" && p.length < 8) {
-    setMsg("Пароль має бути мінімум 8 символів.");
-    return;
-  }
+  // 3) фільтрація
+  const filtered = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    const min = minPrice === "" ? -Infinity : Number(minPrice);
+    const max = maxPrice === "" ? Infinity : Number(maxPrice);
 
-  setLoading(true);
-  try {
-    const res = await fetch(`/api/auth/${mode}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email: e, password: p }),
-      credentials: "include",
+    return products.filter((p) => {
+      const inText =
+        !qq ||
+        p.title.toLowerCase().includes(qq) ||
+        p.slug.toLowerCase().includes(qq);
+
+      const inType = type === "all" ? true : p.type === type;
+      const inPrice = p.price >= min && p.price <= max;
+
+      return inText && inType && inPrice;
     });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      setMsg(data?.error || "Помилка. Спробуйте ще раз.");
-      return;
-    }
-
-
-router.replace("/");
-router.refresh();
-  } finally {
-    setLoading(false);
-  }
-
-  }
+  }, [products, q, type, minPrice, maxPrice]);
 
   return (
-    <SiteFrame title="Навігація">
-      <div style={{ textAlign: "center", marginBottom: 18 }}>
-        <div style={{ fontSize: 36, fontWeight: 700, color: "var(--dark)" }}>
-          {mode === "login" ? "Log in" : "Register"}
-        </div>
-      </div>
-
-      <div className="card" style={{ maxWidth: 360, margin: "0 auto", padding: 18 }}>
-        {mode === "register" && (
-          <>
-            <label style={{ fontSize: 12, color: "var(--muted)" }}>Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Value"
-              style={{ width: "100%", marginTop: 6, marginBottom: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 6 }}
-            />
-          </>
-        )}
-
-        <label style={{ fontSize: 12, color: "var(--muted)" }}>Email</label>
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Value"
-          style={{ width: "100%", marginTop: 6, marginBottom: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 6 }}
-        />
-
-        <label style={{ fontSize: 12, color: "var(--muted)" }}>Password</label>
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Value"
-          style={{ width: "100%", marginTop: 6, marginBottom: 12, padding: "10px 12px", border: "1px solid var(--border)", borderRadius: 6 }}
-        />
-
-        <button
-          onClick={submit}
-          disabled={loading}
+    <SiteFrame title="Плодові саджанці">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "260px 1fr",
+          gap: 18,
+          alignItems: "start",
+        }}
+      >
+        {/* LEFT FILTERS */}
+        <aside
           style={{
-            width: "100%",
-            padding: "12px 14px",
-            borderRadius: 6,
-            border: "1px solid #2a2a2a",
-            background: "#2a2a2a",
-            color: "white",
-            cursor: "pointer",
-            opacity: loading ? 0.7 : 1,
+            borderRight: "1px solid var(--border)",
+            paddingRight: 14,
           }}
         >
-          {loading ? "..." : mode === "login" ? "Sign In" : "Create account"}
-        </button>
+          <h3 style={{ margin: "0 0 12px" }}>Фільтри</h3>
 
-        <div style={{ marginTop: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button
-            onClick={() => { setMode(mode === "login" ? "register" : "login"); setMsg(null); }}
-            style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--muted)", textDecoration: "underline" }}
-          >
-            {mode === "login" ? "Реєстрація" : "Вже є акаунт? Log in"}
-          </button>
-
-          {/* Admin shortcut info */}
-          <span style={{ fontSize: 12, color: "var(--muted)" }}>
-            Admin: <b>admin</b> / <b>12345123</b>
-          </span>
-        </div>
-
-        {msg && (
-          <div style={{ marginTop: 12, padding: 10, borderRadius: 6, border: "1px solid var(--border)", background: "white", color: "#a00000", fontSize: 13 }}>
-            {msg}
+          {/* Search */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
+              Пошук
+            </div>
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Напр. Антонівка…"
+              style={{
+                width: "100%",
+                padding: "10px 12px",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+              }}
+            />
           </div>
-        )}
+
+          {/* Category (type) */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
+              Категорія
+            </div>
+
+            <div style={{ display: "grid", gap: 8 }}>
+              {typeOptions.map((t) => (
+                <label key={t} style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="type"
+                    checked={type === t}
+                    onChange={() => setType(t)}
+                  />
+                  <span>
+                    {t === "all" ? "Усі" : t}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Price */}
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 6 }}>
+              Ціна (UAH)
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                placeholder="від"
+                inputMode="numeric"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              />
+              <input
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                placeholder="до"
+                inputMode="numeric"
+                style={{
+                  width: "100%",
+                  padding: "10px 12px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                }}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setQ("");
+              setType("all");
+              setMinPrice("");
+              setMaxPrice("");
+            }}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid var(--border)",
+              background: "white",
+              cursor: "pointer",
+            }}
+          >
+            Скинути фільтри
+          </button>
+        </aside>
+
+        {/* RIGHT GRID */}
+        <section>
+          {loading ? (
+            <div style={{ color: "var(--muted)" }}>Завантаження…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ color: "var(--muted)" }}>Нічого не знайдено.</div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                gap: 14,
+              }}
+            >
+              {filtered.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/product/${p.slug}`}
+                  style={{
+                    display: "block",
+                    border: "1px solid var(--border)",
+                    borderRadius: 12,
+                    background: "var(--card)",
+                    padding: 12,
+                    textDecoration: "none",
+                    color: "inherit",
+                  }}
+                >
+                  {p.imagePath ? (
+                    <img
+                      src={p.imagePath}
+                      alt={p.title}
+                      style={{
+                        width: "100%",
+                        height: 160,
+                        objectFit: "cover",
+                        borderRadius: 10,
+                        marginBottom: 10,
+                      }}
+                    />
+                  ) : null}
+
+                  <div style={{ fontWeight: 700, fontSize: 16 }}>{p.title}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13, marginTop: 6 }}>
+                    {p.price} UAH
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
     </SiteFrame>
   );

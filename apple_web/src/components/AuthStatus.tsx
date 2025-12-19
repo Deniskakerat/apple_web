@@ -8,50 +8,74 @@ type Me = { id: string; email: string; name: string | null; role: "USER" | "ADMI
 
 export default function AuthStatus() {
   const [user, setUser] = useState<Me | null>(null);
-  const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
 
-  const load = async () => {
-    const res = await fetch("/api/auth/me", {
-      cache: "no-store",
-      credentials: "include",
-    });
-    const data = await res.json().catch(() => ({}));
-    setUser(data.user ?? null);
-  };
+  async function loadMe() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      setUser(data.user ?? null);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-useEffect(() => {
-  let alive = true;
-  (async () => {
-    const res = await fetch("/api/auth/me", { cache: "no-store", credentials: "include" });
-    const data = await res.json().catch(() => ({}));
-    if (alive) setUser(data.user ?? null);
-  })();
-  return () => { alive = false; };
-}, [pathname]);
+  useEffect(() => {
+    loadMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
-const logout = async () => {
-  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-  setUser(null);
-  router.replace("/");
-  router.refresh();
-};
+  if (loading) return null;
 
-  if (!user) return <Link className="navLink" href="/login">Log in</Link>;
-
-  return (
-    <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", alignItems: "center" }}>
-      <span style={{ fontSize: 12, color: "var(--muted)" }}>{user.role}</span>
-
-      {user.role === "ADMIN" && (
-        <Link className="navLink" href="/admin" style={{ textDecoration: "underline" }}>
-          ADMIN
+  // ✅ Guest
+  if (!user) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <Link className="navLink" href="/login">
+          Log in
         </Link>
+        <span style={{ color: "var(--muted)" }}>Guest</span>
+      </div>
+    );
+  }
+
+  // ✅ Logged in
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {user.role === "ADMIN" && (
+        <>
+          <Link className="navLink" href="/admin/orders" style={{ fontWeight: 700 }}>
+            Admin Orders
+          </Link>
+          <Link className="navLink" href="/admin/products" style={{ fontWeight: 700 }}>
+            Manage Products
+          </Link>
+        </>
       )}
 
+      <span style={{ color: "var(--muted)" }}>
+        {user.role === "ADMIN" ? "Admin" : user.email}
+      </span>
+
       <button
-        onClick={logout}
-        style={{ background: "transparent", border: "none", cursor: "pointer", textDecoration: "underline" }}
+        onClick={async () => {
+          await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+          setUser(null);
+
+          // ✅ оновити сторінку/стан після logout
+          router.refresh();
+          router.push("/");
+        }}
+        style={{
+          background: "transparent",
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: "3px 8px",
+          cursor: "pointer",
+        }}
       >
         Logout
       </button>

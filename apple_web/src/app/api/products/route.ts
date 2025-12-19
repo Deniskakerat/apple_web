@@ -1,26 +1,20 @@
 import { prisma } from "@/lib/prisma";
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { slug: string } }
-) {
-  const product = await prisma.product.findUnique({
-    where: { slug: params.slug },
+export async function GET() {
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
     select: {
       id: true,
       title: true,
       slug: true,
       price: true,
       stock: true,
-      type: true,
       imagePath: true,
       description: true,
+      type: true,
     },
+    orderBy: { createdAt: "desc" },
   });
 
-  if (!product) {
-    return Response.json({ error: "Not found" }, { status: 404 });
-  }
-
-  return Response.json(product);
+  return Response.json({ products });
 }
