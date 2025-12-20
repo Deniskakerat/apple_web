@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: "Вкажіть email і пароль." }, { status: 400 });
   }
 
-  // ✅ Admin shortcut: email = "admin", password = "12345123"
+  // Admin shortcut: email = "admin", password = "12345123"
   if (rawEmail === "admin" && pass === "12345123") {
     // створимо (або оновимо) адміна в БД, щоб все було офіційно
     const adminEmail = "admin@local";

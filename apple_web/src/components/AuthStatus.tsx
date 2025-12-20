@@ -30,7 +30,7 @@ export default function AuthStatus() {
 
   if (loading) return null;
 
-  // ✅ Guest
+  // Guest
   if (!user) {
     return (
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -42,7 +42,7 @@ export default function AuthStatus() {
     );
   }
 
-  // ✅ Logged in
+  //  Logged in
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
       {user.role === "ADMIN" && (
@@ -65,7 +65,7 @@ export default function AuthStatus() {
           await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
           setUser(null);
 
-          // ✅ оновити сторінку/стан після logout
+          //  оновити сторінку/стан після logout
           router.refresh();
           router.push("/");
         }}
